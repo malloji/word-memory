@@ -4,7 +4,7 @@
  *   - 자극을 stimuli.js(본실험_단어셋_v1 에서 생성)로 분리
  *   - DESIGN 상수로 설계 선택: 기본 'themes_plus_unrelated' = 주제 목록 3개(학교·음료·병원) + 무관 목록 1개, 블록 4개
  *     ('latin_square' = 유인어 고정·조건 회전, 블록 3개)
- *   - 블록당 학습 15단어, 산수(덧셈 5문제를 맞히면 끝, 시간 제한 없음), 재인 검사 old 8 + new 8, 4점 확신 + RT
+ *   - 블록당 학습 15단어, 산수(덧셈 5문제를 맞히거나 20초가 지나면 끝), 재인 검사 old 8 + new 8, 4점 확신 + RT
  *   - 참가자 ID로 무선화를 재현(seed)할 수 있음
  * 설계 근거: experiment_design_v1.md
  */
@@ -27,7 +27,8 @@ const N_FOILS = 7;                  // 검사 무관 foil 수 (+ 유인어 1 = n
 const QUICK = new URLSearchParams(window.location.search).get('quick') === '1';
 const STUDY_SECONDS = QUICK ? 0.3 : 1.5;
 const BLANK_SECONDS = QUICK ? 0.1 : 0.5;
-const PROBLEMS_TO_SOLVE = QUICK ? 2 : 5;   // 산수: 이 개수만큼 맞히면 끝(시간 제한 없음, 틀리면 같은 문제 다시)
+const PROBLEMS_TO_SOLVE = QUICK ? 2 : 5;   // 산수: 이 개수만큼 맞히면 끝(틀리면 같은 문제 다시)
+const ARITHMETIC_MAX_SECONDS = QUICK ? 5 : 20;   // 산수: 다 못 맞혀도 이 시간이 지나면 끝(남은 문제는 건너뜀)
 const PRACTICE = true;              // 연습 블록(분석 제외)
 const SHUFFLE_TEST_ORDER = true;
 const CONDITIONS = ['high', 'mid', 'unrelated'];
@@ -250,18 +251,25 @@ function baseRow(block, blockNum, phase) {
            critical_lure: block.lure, condition: block.condition, phase };
 }
 
-function* arithmetic(blockNum, block, nProblems) {
-  show(`계산 과제\n\n덧셈 문제 ${nProblems}개를 풀어 주세요.`,
+function* arithmetic(blockNum, block, nProblems, maxSeconds) {
+  show(`계산 과제\n\n덧셈 문제 ${nProblems}개를 풀어 주세요. (최대 ${maxSeconds}초)`,
        '정답을 입력해야 다음 문제로 넘어갑니다. 숫자를 입력하고 Enter를 누르세요. 시작하려면 스페이스바를 누르세요.');
   yield* getKey(['space']);
   const overall = new util.Clock();
-  for (let number = 1; number <= nProblems; number++) {
+  for (let number = 1; number <= nProblems && overall.getTime() < maxSeconds; number++) {
     const a = randint(10, 49), b = randint(10, 49), correctAnswer = a + b;
     window.K3L_PROBLEM = correctAnswer;  // 검증용
     let typed = '', attempts = 0, solved = false, feedbackUntil = 0;
     const questionClock = new util.Clock();
     typedKeys.length = 0;
     while (!solved) {
+      if (overall.getTime() >= maxSeconds) {  // time is up: record the unfinished problem and leave the task
+        addRow({ ...baseRow(block, blockNum, 'arithmetic'), trial: number, word_or_problem: `${a}+${b}`,
+                 item_type: 'timeout', study_position: '', correct_answer: correctAnswer, typed_answer: typed,
+                 is_correct: 0, rating_1to4: '', said_seen: '', confidence: '',
+                 rt_seconds: Number(questionClock.getTime().toFixed(4)) });
+        break;
+      }
       const feedback = overall.getTime() < feedbackUntil ? '틀렸습니다. 다시 입력해 주세요!' : '정답을 입력해야 다음 문제로 넘어갑니다.';
       show(`${a} + ${b} = ?\n\n입력한 답: ${typed || '_'}`, `${feedback}\nEnter: 제출   Backspace: 지우기   ${number} / ${nProblems}번째 문제`);
       for (const key of typedKeys.splice(0)) {
@@ -293,7 +301,7 @@ function* runBlock(block, blockNum, total, isPractice) {
     addRow({ ...baseRow(block, blockNum, 'study'), trial: k + 1, word_or_problem: word, item_type: 'study_word', study_position: k + 1,
              correct_answer: '', typed_answer: '', is_correct: '', rating_1to4: '', said_seen: '', confidence: '', rt_seconds: '' });
   }
-  yield* arithmetic(blockNum, block, isPractice ? 2 : PROBLEMS_TO_SOLVE);
+  yield* arithmetic(blockNum, block, isPractice ? 2 : PROBLEMS_TO_SOLVE, ARITHMETIC_MAX_SECONDS);
   show('기억 검사\n\n각 단어가 방금 외운 목록에 있었나요?\n\n1 = 확실히 있었다    2 = 아마 있었다\n3 = 아마 없었다      4 = 확실히 없었다',
        '시작하려면 스페이스바를 누르세요.');
   yield* getKey(['space']);
