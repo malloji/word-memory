@@ -4,7 +4,7 @@
 
 ## 파일
 - index.html            : 그대로 GitHub Pages 루트에 두면 됨 (korean_three_level.js 를 module 로 불러옴)
-- korean_three_level.js : 실험 본체. 설정 상수는 파일 머리에(INCLUDE_SPARE, LIST_LEN, 산수 문제 수·최대 시간, DataPipe ID, 완료 후 구글폼 URL)
+- korean_three_level.js : 실험 본체. 설정 상수는 파일 머리에(INCLUDE_SPARE, LIST_LEN, 산수 시간, DataPipe ID, 완료 후 구글폼 URL)
 - stimuli.js            : 자극. 손으로 고치지 말고 `python make_stimuli_js.py` 로 다시 생성 (원본: stimuli_sets_v0.5.csv(강 15), unrelated_pool_v0.4.csv)
 
 ## 설계 (korean_three_level.js 의 DESIGN 상수)
@@ -15,7 +15,7 @@
 
 ## 기존 데모와 달라진 점
 1. 자극을 stimuli.js 로 분리(세트 간 중복·무관 풀 겹침은 make_stimuli_js.py 가, 세션 안 단어 유일성은 실행 시 코드가 검사)
-2. 블록당 학습 15단어(1.5 s + 0.5 s), 산수(덧셈 5문제를 맞히거나 20초가 지나면 끝, 틀리면 같은 문제 다시; 시간 초과로 못 푼 문제는 item_type=timeout 으로 기록), 재인 검사 old 8 + new 8, 4점 확신 + RT
+2. 블록당 학습 15단어(1.5 s + 0.5 s), 산수(항상 20초 동안 진행, 문제 수 제한 없음, 틀리면 같은 문제 다시; 연습은 10초; 20초가 될 때 풀던 문제는 item_type=timeout 으로 기록), 재인 검사 old 8 + new 8, 4점 확신 + RT
 3. 무관 학습 목록과 foil 은 60개 무관 풀에서 참가자마다 중복 없이 추출. 같은 참가자 ID → 같은 무선화(재현 가능)
 4. 연습 블록 1개(condition=practice, 분석 제외)
 5. CSV 열 추가: version, design, set_id, study_position
@@ -23,7 +23,7 @@
 ## URL 매개변수
 - ?participant=12        참가자 번호(정수 권장; latin_square 설계에서는 1,2,3,… 순으로 배정해야 버전이 균형)
 - ?test=1                DataPipe 업로드 없이 CSV 다운로드(점검용)
-- ?quick=1               제시 0.3초·산수 2문제·최대 5초(동작 점검용). 본실험에서는 절대 붙이지 말 것
+- ?quick=1               제시 0.3초·산수 5초(동작 점검용). 본실험에서는 절대 붙이지 말 것
 
 ## 배포 (GitHub Pages)
 1. 저장소(현재 https://github.com/100ga/world-memory)에 세 파일(index.html, korean_three_level.js, stimuli.js)을 커밋·푸시
